@@ -219,6 +219,9 @@ public class PrimDungeon : MonoBehaviour
 	// Use this for initialization
 	void Start()
 	{
+		Terrain.activeTerrain.transform.position = new Vector3(-1/2f * cube.transform.localScale.x, 0, -1/2f * cube.transform.localScale.z);
+		Terrain.activeTerrain.terrainData.size.Set((MAZE_SIZE_X + 1) * cube.transform.localScale.x, 0, (MAZE_SIZE_Y + 1) * cube.transform.localScale.z);
+
 		maze = new bool[MAZE_SIZE_X, MAZE_SIZE_Y];
 		frontier = new List<Vector2>();
 
