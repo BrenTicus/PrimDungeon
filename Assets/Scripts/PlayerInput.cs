@@ -2,18 +2,15 @@
 using System.Collections;
 
 public class PlayerInput : MonoBehaviour {
-
-	// Use this for initialization
-	void Start () {
-	
-	}
+	public float TurnSpeed = 1.5f;
+	public float MoveSpeed = 0.1f;
 	
 	// Update is called once per frame
 	void Update () {
 		float x = Input.GetAxis("Horizontal");
 		float y = Input.GetAxis("Vertical");
 
-		transform.Rotate(Vector3.up, x * 1.5f);
-		transform.Translate(0, 0, y / 10);
+		transform.Rotate(Vector3.up, x * TurnSpeed);
+		transform.Translate(0, 0, MoveSpeed * y);
 	}
 }

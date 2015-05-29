@@ -7,20 +7,20 @@ public class PrimDungeon : MonoBehaviour
 	// This is just set in the editor to physically create the maze.
 	public GameObject cube;
 	// Basic maze properties
-	public int MAZE_SIZE_X = 50;
-	public int MAZE_SIZE_Y = 50;
-	public int CELLS_TO_ADD = 100;
-	public int ROOMS_TO_ADD = 5;
-	public int ROOM_MIN_SIZE = 2;
-	public int ROOM_MAX_SIZE = 4;
+	public int MazeSizeX = 50;
+	public int MazeSizeY = 50;
+	public int CellsToAdd = 100;
+	public int RoomsToAdd = 5;
+	public int RoomMinSize = 2;
+	public int RoomMaxSize = 4;
 	// Maze generation flags
-	public bool PLACE_ROOMS = true;
-	public bool SEPARATE_ROOMS = false;
-	public bool PLACE_RANDOM_CELLS = true;
-	public bool UNCARVE_MAZE = true;
-	public bool FIX_PILLARS = true;
-	public bool MOVE_PILLARS_TO_FIX = true;
-	public bool UNCARVE_AFTER_PILLARS = true;
+	public bool PlaceRooms = true;
+	public bool SeparateRooms = false;
+	public bool PlaceRandomCells = true;
+	public bool UncarveMaze = true;
+	public bool FixPillars = true;
+	public bool MovePillarsToFix = true;
+	public bool UncarveAfterPillars = true;
 
 	// Data structures
 	bool[,] maze;
@@ -31,7 +31,7 @@ public class PrimDungeon : MonoBehaviour
 	 */
 	void addFrontier(int x, int y)
 	{
-		if (x < MAZE_SIZE_X && y < MAZE_SIZE_Y && x >= 0 && y >= 0)
+		if (x < MazeSizeX && y < MazeSizeY && x >= 0 && y >= 0)
 			if (!maze[x, y])
 				frontier.Add(new Vector2(x, y));
 	}
@@ -62,11 +62,11 @@ public class PrimDungeon : MonoBehaviour
 		int count = 0;
 		if (x > 0)
 			if (maze[x - 1, y]) count++;
-		if (x < MAZE_SIZE_X - 1)
+		if (x < MazeSizeX - 1)
 			if (maze[x + 1, y]) count++;
 		if (y > 0)
 			if (maze[x, y - 1]) count++;
-		if (y < MAZE_SIZE_Y - 1)
+		if (y < MazeSizeY - 1)
 			if (maze[x, y + 1]) count++;
 
 		return count;
@@ -98,17 +98,17 @@ public class PrimDungeon : MonoBehaviour
 	void addCells()
 	{
 		int x, y;
-		for (int i = 0; i < CELLS_TO_ADD; i++)
+		for (int i = 0; i < CellsToAdd; i++)
 		{
-			x = Random.Range(0, MAZE_SIZE_X);
-			y = Random.Range(0, MAZE_SIZE_Y);
-			for (int j = 0; j < MAZE_SIZE_Y; j++)
+			x = Random.Range(0, MazeSizeX);
+			y = Random.Range(0, MazeSizeY);
+			for (int j = 0; j < MazeSizeY; j++)
 			{
 				if (mark(x, y))
 					break;
 				else
 					// Go to the next line.
-					x = (x + 1) % MAZE_SIZE_X;
+					x = (x + 1) % MazeSizeX;
 			}
 		}
 	}
@@ -118,7 +118,7 @@ public class PrimDungeon : MonoBehaviour
 	 */
 	void addRooms()
 	{
-		if (SEPARATE_ROOMS)
+		if (SeparateRooms)
 			addRoomsSeparate();
 		else
 			addRoomsLazy();
@@ -130,12 +130,12 @@ public class PrimDungeon : MonoBehaviour
 	void addRoomsLazy()
 	{
 		int x, y, xdim, ydim;
-		for (int i = 0; i < ROOMS_TO_ADD; i++)
+		for (int i = 0; i < RoomsToAdd; i++)
 		{
-			xdim = Random.Range(ROOM_MIN_SIZE, ROOM_MAX_SIZE);
-			ydim = Random.Range(ROOM_MIN_SIZE, ROOM_MAX_SIZE);
-			x = Random.Range(0, MAZE_SIZE_X - xdim);
-			y = Random.Range(0, MAZE_SIZE_Y - ydim);
+			xdim = Random.Range(RoomMinSize, RoomMaxSize);
+			ydim = Random.Range(RoomMinSize, RoomMaxSize);
+			x = Random.Range(0, MazeSizeX - xdim);
+			y = Random.Range(0, MazeSizeY - ydim);
 
 			for (int j = x; j < x + xdim; j++)
 			{
@@ -154,19 +154,19 @@ public class PrimDungeon : MonoBehaviour
 	{
 		int x, y, xdim, ydim;
 		bool overlap;
-		bool[,] rooms = new bool[MAZE_SIZE_X, MAZE_SIZE_Y];
+		bool[,] rooms = new bool[MazeSizeX, MazeSizeY];
 
 		int roomsPlaced = 0, iterations = 0;
 
 		// Keep going until you've placed all the rooms you want to.
-		while(roomsPlaced < ROOMS_TO_ADD)
+		while(roomsPlaced < RoomsToAdd)
 		{
 			overlap = false;
 			// Choose a location and size for the room.
-			xdim = Random.Range(ROOM_MIN_SIZE, ROOM_MAX_SIZE);
-			ydim = Random.Range(ROOM_MIN_SIZE, ROOM_MAX_SIZE);
-			x = Random.Range(0, MAZE_SIZE_X - xdim);
-			y = Random.Range(0, MAZE_SIZE_Y - ydim);
+			xdim = Random.Range(RoomMinSize, RoomMaxSize);
+			ydim = Random.Range(RoomMinSize, RoomMaxSize);
+			x = Random.Range(0, MazeSizeX - xdim);
+			y = Random.Range(0, MazeSizeY - ydim);
 
 			// Check if there's a room there already.
 			for (int j = x; j < x + xdim; j++)
@@ -195,7 +195,7 @@ public class PrimDungeon : MonoBehaviour
 			// If this has been going on for some time and rooms don't seem to be fitting,
 			// just find a spot where it'll fit. If there isn't one, stop there, it's good 
 			// enough.
-			if(iterations > 5 * ROOMS_TO_ADD)
+			if(iterations > 5 * RoomsToAdd)
 			{
 				int[] spot = findOpenSpace(rooms, xdim, ydim);
 				if (spot != null)
@@ -236,9 +236,9 @@ public class PrimDungeon : MonoBehaviour
 
 		bool space;
 		// Just check the whole array.
-		for(int i = 0; i < MAZE_SIZE_X - x; i++)
+		for(int i = 0; i < MazeSizeX - x; i++)
 		{
-			for(int j = 0; j < MAZE_SIZE_Y - y; j++)
+			for(int j = 0; j < MazeSizeY - y; j++)
 			{
 				// Empty spot, see if a room will fit.
 				if (!grid[i,j])
@@ -269,8 +269,8 @@ public class PrimDungeon : MonoBehaviour
 	{
 		int x;
 
-		for(int i = 0; i < MAZE_SIZE_X; i++)
-			for(int j = 0; j < MAZE_SIZE_Y; j++)
+		for(int i = 0; i < MazeSizeX; i++)
+			for(int j = 0; j < MazeSizeY; j++)
 			{
 				// If everything nearby is carved out, it's a pillar.
 				if(neighbours(i, j) == 4 && !maze[i,j])
@@ -286,7 +286,7 @@ public class PrimDungeon : MonoBehaviour
 								if(i-2 > 0)
 									if(!maze[i-2,j])
 									{
-										if (MOVE_PILLARS_TO_FIX) maze[i, j] = true;
+										if (MovePillarsToFix) maze[i, j] = true;
 										maze[i - 1, j] = false;
 										x = 5; i = 0; j = 0;
 										break;
@@ -294,10 +294,10 @@ public class PrimDungeon : MonoBehaviour
 								x++;
 								break;
 							case 1:
-								if(i+2 < MAZE_SIZE_X)
+								if(i+2 < MazeSizeX)
 									if(!maze[i+2,j])
 									{
-										if (MOVE_PILLARS_TO_FIX) maze[i, j] = true;
+										if (MovePillarsToFix) maze[i, j] = true;
 										maze[i + 1, j] = false;
 										x = 5; i = 0; j = 0;
 									}
@@ -307,7 +307,7 @@ public class PrimDungeon : MonoBehaviour
 								if(j-2 > 0)
 									if(!maze[i,j-2])
 									{
-										if (MOVE_PILLARS_TO_FIX) maze[i, j] = true;
+										if (MovePillarsToFix) maze[i, j] = true;
 										maze[i, j - 1] = false;
 										x = 5; i = 0; j = 0;
 										break;
@@ -315,10 +315,10 @@ public class PrimDungeon : MonoBehaviour
 								x++;
 								break;
 							case 3:
-								if(j+2 < MAZE_SIZE_Y)
+								if(j+2 < MazeSizeY)
 									if(!maze[i,j+2])
 									{
-										if(MOVE_PILLARS_TO_FIX) maze[i, j] = true;
+										if(MovePillarsToFix) maze[i, j] = true;
 										maze[i, j + 1] = false;
 										x = 5; i = 0; j = 0;
 										break;
@@ -336,9 +336,9 @@ public class PrimDungeon : MonoBehaviour
 	 */
 	void uncarve()
 	{
-		for(int i = 0; i < MAZE_SIZE_X; i++)
+		for(int i = 0; i < MazeSizeX; i++)
 		{
-			for(int j = 0; j < MAZE_SIZE_Y; j++)
+			for(int j = 0; j < MazeSizeY; j++)
 			{
 				if(maze[i, j] && neighbours(i,j) < 2)
 				{
@@ -353,36 +353,36 @@ public class PrimDungeon : MonoBehaviour
 	void Start()
 	{
 		Terrain.activeTerrain.transform.position = new Vector3(-1/2f * cube.transform.localScale.x, 0, -1/2f * cube.transform.localScale.z);
-		Terrain.activeTerrain.terrainData.size.Set((MAZE_SIZE_X + 1) * cube.transform.localScale.x, 0, (MAZE_SIZE_Y + 1) * cube.transform.localScale.z);
+		Terrain.activeTerrain.terrainData.size.Set((MazeSizeX + 1) * cube.transform.localScale.x, 0, (MazeSizeY + 1) * cube.transform.localScale.z);
 
-		maze = new bool[MAZE_SIZE_X, MAZE_SIZE_Y];
+		maze = new bool[MazeSizeX, MazeSizeY];
 		frontier = new List<Vector2>();
 
 		generateMaze();
-		if (PLACE_RANDOM_CELLS) addCells();
-		if (PLACE_ROOMS) addRooms();
-		if (UNCARVE_MAZE) uncarve();
-		if (FIX_PILLARS) fixPillars();
-		if (UNCARVE_AFTER_PILLARS) uncarve();
+		if (PlaceRandomCells) addCells();
+		if (PlaceRooms) addRooms();
+		if (UncarveMaze) uncarve();
+		if (FixPillars) fixPillars();
+		if (UncarveAfterPillars) uncarve();
 
 		// Create the maze in Unity.
-		for (int i = 0; i < MAZE_SIZE_X; i++)
+		for (int i = 0; i < MazeSizeX; i++)
 		{
-			for (int j = 0; j < MAZE_SIZE_Y; j++)
+			for (int j = 0; j < MazeSizeY; j++)
 			{
 				if (!maze[i, j]) Instantiate(cube, new Vector3(i * cube.transform.localScale.x, 0.0f, j * cube.transform.localScale.z), Quaternion.identity);
 			}
 		}
 
-		for (int i = -1; i <= MAZE_SIZE_X; i++)
+		for (int i = -1; i <= MazeSizeX; i++)
 		{
 			Instantiate(cube, new Vector3(i * cube.transform.localScale.x, 1.0f, -1 * cube.transform.localScale.z), Quaternion.identity);
-			Instantiate(cube, new Vector3(i * cube.transform.localScale.x, 1.0f, MAZE_SIZE_Y * cube.transform.localScale.z), Quaternion.identity);
+			Instantiate(cube, new Vector3(i * cube.transform.localScale.x, 1.0f, MazeSizeY * cube.transform.localScale.z), Quaternion.identity);
 		}
-		for (int i = 0; i < MAZE_SIZE_Y; i++)
+		for (int i = 0; i < MazeSizeY; i++)
 		{
 			Instantiate(cube, new Vector3(-1 * cube.transform.localScale.x, 1.0f, i * cube.transform.localScale.z), Quaternion.identity);
-			Instantiate(cube, new Vector3(MAZE_SIZE_X * cube.transform.localScale.x, 1.0f, i * cube.transform.localScale.z), Quaternion.identity);
+			Instantiate(cube, new Vector3(MazeSizeX * cube.transform.localScale.x, 1.0f, i * cube.transform.localScale.z), Quaternion.identity);
 		}
 	}
 }
