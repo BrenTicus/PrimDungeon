@@ -4,25 +4,31 @@ using System.Collections.Generic;
 
 public class PrimDungeon : MonoBehaviour
 {
+	// This is just set in the editor to physically create the maze.
 	public GameObject cube;
+	// Basic maze properties
 	public int MAZE_SIZE_X = 50;
 	public int MAZE_SIZE_Y = 50;
 	public int CELLS_TO_ADD = 100;
 	public int ROOMS_TO_ADD = 5;
 	public int ROOM_MIN_SIZE = 2;
 	public int ROOM_MAX_SIZE = 4;
+	// Maze generation flags
 	public bool PLACE_ROOMS = true;
+	public bool SEPARATE_ROOMS = false;
 	public bool PLACE_RANDOM_CELLS = true;
 	public bool UNCARVE_MAZE = true;
 	public bool FIX_PILLARS = true;
 	public bool MOVE_PILLARS_TO_FIX = true;
 	public bool UNCARVE_AFTER_PILLARS = true;
+
+	// Data structures
 	bool[,] maze;
 	List<Vector2> frontier;
 
 	/*
-	 Add a point to the frontier. If it's out of bounds or already in the maze, ignore.
-	*/
+	 * Add a point to the frontier. If it's out of bounds or already in the maze, ignore.
+	 */
 	void addFrontier(int x, int y)
 	{
 		if (x < MAZE_SIZE_X && y < MAZE_SIZE_Y && x >= 0 && y >= 0)
@@ -34,10 +40,10 @@ public class PrimDungeon : MonoBehaviour
 	 Mark a cell in the maze as being a path and add adjacent cells to the frontier
 	 for future generation.
 	*/
-	int mark(int x, int y)
+	bool mark(int x, int y)
 	{
 		// Early return if the cell has already been marked.
-		if (maze[x, y]) return -1;
+		if (maze[x, y]) return false;
 
 		// Otherwise, mark it as a path and add all adjacent cells to the frontier.
 		maze[x, y] = true;
@@ -45,7 +51,7 @@ public class PrimDungeon : MonoBehaviour
 		addFrontier(x + 1, y);
 		addFrontier(x, y - 1);
 		addFrontier(x, y + 1);
-		return 0;
+		return true;
 	}
 
 	/*
@@ -98,36 +104,163 @@ public class PrimDungeon : MonoBehaviour
 			y = Random.Range(0, MAZE_SIZE_Y);
 			for (int j = 0; j < MAZE_SIZE_Y; j++)
 			{
-				if (mark(x, y) == 0)
+				if (mark(x, y))
 					break;
 				else
+					// Go to the next line.
 					x = (x + 1) % MAZE_SIZE_X;
 			}
 		}
 	}
 
 	/*
-	 * Carve out a large room.
+	 * Dispatch to determine how to carve the rooms.
 	 */
 	void addRooms()
 	{
+		if (SEPARATE_ROOMS)
+			addRoomsSeparate();
+		else
+			addRoomsLazy();
+	}
+
+	/*
+	 * Carve out rooms arbitrarily.
+	 */
+	void addRoomsLazy()
+	{
 		int x, y, xdim, ydim;
-		for(int i = 0; i < ROOMS_TO_ADD; i++)
+		for (int i = 0; i < ROOMS_TO_ADD; i++)
 		{
 			xdim = Random.Range(ROOM_MIN_SIZE, ROOM_MAX_SIZE);
 			ydim = Random.Range(ROOM_MIN_SIZE, ROOM_MAX_SIZE);
 			x = Random.Range(0, MAZE_SIZE_X - xdim);
 			y = Random.Range(0, MAZE_SIZE_Y - ydim);
 
-			for(int j = x; j < x + xdim; j++)
+			for (int j = x; j < x + xdim; j++)
 			{
-				for(int k = y; k < y + ydim; k++)
+				for (int k = y; k < y + ydim; k++)
 				{
 					mark(j, k);
 				}
 			}
 		}
 	}
+
+	/*
+	 * Carve out rooms so that they don't overlap.
+	 */
+	void addRoomsSeparate()
+	{
+		int x, y, xdim, ydim;
+		bool overlap;
+		bool[,] rooms = new bool[MAZE_SIZE_X, MAZE_SIZE_Y];
+
+		int roomsPlaced = 0, iterations = 0;
+
+		// Keep going until you've placed all the rooms you want to.
+		while(roomsPlaced < ROOMS_TO_ADD)
+		{
+			overlap = false;
+			// Choose a location and size for the room.
+			xdim = Random.Range(ROOM_MIN_SIZE, ROOM_MAX_SIZE);
+			ydim = Random.Range(ROOM_MIN_SIZE, ROOM_MAX_SIZE);
+			x = Random.Range(0, MAZE_SIZE_X - xdim);
+			y = Random.Range(0, MAZE_SIZE_Y - ydim);
+
+			// Check if there's a room there already.
+			for (int j = x; j < x + xdim; j++)
+			{
+				for (int k = y; k < y + ydim; k++)
+				{
+					if (rooms[j,k]) overlap = true;
+				}
+			}
+
+			// If not, place it.
+			if (!overlap)
+			{
+				for (int j = x; j < x + xdim; j++)
+				{
+					for (int k = y; k < y + ydim; k++)
+					{
+						mark(j, k);
+						rooms[j,k] = true;
+					}
+				}
+				roomsPlaced++;
+			}
+			iterations++;
+
+			// If this has been going on for some time and rooms don't seem to be fitting,
+			// just find a spot where it'll fit. If there isn't one, stop there, it's good 
+			// enough.
+			if(iterations > 5 * ROOMS_TO_ADD)
+			{
+				int[] spot = findOpenSpace(rooms, xdim, ydim);
+				if (spot != null)
+				{
+					for (int j = spot[0]; j < spot[0] + xdim; j++)
+					{
+						for (int k = spot[1]; k < spot[1] + ydim; k++)
+						{
+							mark(j, k);
+							rooms[j, k] = true;
+						}
+					}
+					roomsPlaced++;
+				}
+				else break;
+			}
+		}
+		Debug.Log(roomsPlaced);
+	}
+
+	/*
+	 * Determines whether there is space for a rectangle of size x*y in a grid.
+	 * This is not a particularly efficient method, but it works and runs quickly enough.
+	 * Parameters:
+	 *		grid	The array to check
+	 *		x, y	The x/y dimensions of the rectangle to fit
+	 * Output:
+	 *		null if there is no space.
+	 *		The coordinates of the open space, otherwise.
+	 * Conditions:
+	 *		The returned array is always either null or contains two elements.
+	 */
+	int[] findOpenSpace(bool[,] grid, int x, int y)
+	{
+		// Early exits if dimensions are nonsense or grid is uninitialized.
+		if (x < 0 || y < 0) return null;
+		if (grid == null) return null;
+
+		bool space;
+		// Just check the whole array.
+		for(int i = 0; i < MAZE_SIZE_X - x; i++)
+		{
+			for(int j = 0; j < MAZE_SIZE_Y - y; j++)
+			{
+				// Empty spot, see if a room will fit.
+				if (!grid[i,j])
+				{
+					space = true;
+					for(int k = i; k < i + x; k++)
+					{
+						for (int l = j; l < j + y; l++)
+						{
+							// If one of the spots is already claimed, flag it as such.
+							if (grid[k, l]) space = false;
+						}
+					}
+					// If there's space, return the point where that space starts.
+					if (space) return  new int[2] { i, j };
+				}
+			}
+		}
+
+		return null;
+	}
+
 
 	/*
 	 * Find "pillars" in the map and make them... not pillars.
